@@ -1,0 +1,8 @@
+#!/bin/sh
+
+# Used GPIO
+GPIO=24
+
+echo "$GPIO" > /sys/class/gpio/export
+echo "out" > /sys/class/gpio/gpio"$GPIO"/direction
+/usr/local/bin/gpio -g write $GPIO 1

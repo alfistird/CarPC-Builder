@@ -1,0 +1,48 @@
+#!/bin/bash
+
+# Used GPIO
+GPIO=26
+
+RED=`tput setaf 1`
+GREEN=`tput setaf 2`
+CYAN=`tput setaf 6`
+RESET=`tput sgr0`
+BOLD=`tput bold`
+counter=0
+
+while true
+do
+    STATE=""
+    STATE=`gpio -g read $GPIO`
+    if [ $STATE == "1" ] && [ $counter == "0" ]
+    then
+    echo '{"jsonrpc":"2.0","method":"GUI.ShowNotification","params":{"title":"Warnung: Zuendung FEHLT!","message":"Countdown lauft..."},"id":1}' | netcat localhost 9090
+    echo "[${CYAN}${BOLD}info${RESET}]	Zündung AUS erkannt"
+        counter=0
+        while [ $counter -lt 5 ]
+        do
+        STATE=""
+        STATE=`gpio -g read $GPIO`
+        if [ $STATE == "0" ]
+        then
+	    echo '{"jsonrpc":"2.0","method":"GUI.ShowNotification","params":{"title":"Info: Zuendung VORHANDEN!","message":"Shutdown abgebrochen..."},"id":1}' | netcat localhost 9090
+	    echo "[${GREEN}${BOLD} ok ${RESET}]	Zündung EIN erkannt"
+	    counter=0
+	    break
+	fi
+        if [ $STATE == "1" ]
+        then
+	    counter=$(($counter+1))
+	fi
+        if [ $counter -eq 5 ]
+        then
+	    echo '{"jsonrpc": "2.0", "method": "Player.Stop", "params": { "playerid": 0 }, "id": 1}' | netcat localhost 9090
+	    echo '{"jsonrpc":"2.0","method":"GUI.ShowNotification","params":{"title":"Zuendung AUS!","message":"Das System wird heruntergefahren!"},"id":1}'
+	    echo "[${RED}${BOLD}fail${RESET}]	System wird heruntergefahren!" | netcat localhost 9090
+	    /sbin/shutdown -h now
+	fi
+	sleep 1
+	done
+    fi
+    sleep 1
+done
